@@ -1,168 +1,121 @@
 import 'package:flame/game.dart';
+import 'package:flame/components.dart';
 import 'package:flame/input.dart';
-import 'package:testLast-runner-02/components/player.dart';
-import 'package:testLast-runner-02/components/obstacle.dart';
-import 'package:testLast-runner-02/components/collectible.dart';
-import 'package:testLast-runner-02/services/analytics.dart';
-import 'package:testLast-runner-02/services/ads.dart';
-import 'package:testLast-runner-02/services/storage.dart';
-import 'package:testLast-runner-02/ui/overlays.dart';
+import 'package:testLast-runner-02/models/level_config.dart';
+import 'package:testLast-runner-02/services/analytics_service.dart';
+import 'package:testLast-runner-02/services/game_controller.dart';
 
-/// The main game class for the 'testLast-runner-02' game.
+/// The main FlameGame class for the 'testLast-runner-02' game.
 class testLast-runner-02Game extends FlameGame with TapDetector {
   /// The current game state.
   GameState _gameState = GameState.playing;
 
-  /// The current level being played.
-  int _currentLevel = 1;
-
   /// The player's score.
   int _score = 0;
 
-  /// The player component.
-  late Player _player;
+  /// The player's remaining lives.
+  int _lives = 3;
 
-  /// The list of obstacles in the current level.
-  late List<Obstacle> _obstacles;
+  /// The current level configuration.
+  LevelConfig _levelConfig;
 
-  /// The list of collectibles in the current level.
-  late List<Collectible> _collectibles;
+  /// The game controller.
+  final GameController _gameController;
 
   /// The analytics service.
-  final AnalyticsService _analyticsService = AnalyticsService();
+  final AnalyticsService _analyticsService;
 
-  /// The ads service.
-  final AdsService _adsService = AdsService();
-
-  /// The storage service.
-  final StorageService _storageService = StorageService();
+  /// Constructs a new instance of the `testLast-runner-02Game` class.
+  testLast-runner-02Game({
+    required this._gameController,
+    required this._analyticsService,
+    required LevelConfig levelConfig,
+  }) : _levelConfig = levelConfig {
+    camera.viewport = FixedResolutionViewport(Vector2(720, 1280));
+    camera.followComponent(
+      _gameController.player,
+      worldBounds: Rect.fromLTRB(0, 0, _levelConfig.width, _levelConfig.height),
+    );
+  }
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _loadLevel(_currentLevel);
-    _analyticsService.logGameStart();
+    // Load level components
+    await _loadLevel();
   }
 
-  /// Loads the specified level.
-  void _loadLevel(int level) {
-    // Load level data
-    _player = Player();
-    _obstacles = _loadObstacles(level);
-    _collectibles = _loadCollectibles(level);
-
-    // Add components to the game
-    add(_player);
-    _obstacles.forEach(add);
-    _collectibles.forEach(add);
-
-    // Reset game state
-    _gameState = GameState.playing;
-    _score = 0;
-  }
-
-  /// Loads the obstacles for the specified level.
-  List<Obstacle> _loadObstacles(int level) {
-    // Load obstacle data based on level
-    return [
-      Obstacle(position: Vector2(100, 300)),
-      Obstacle(position: Vector2(300, 400)),
-    ];
-  }
-
-  /// Loads the collectibles for the specified level.
-  List<Collectible> _loadCollectibles(int level) {
-    // Load collectible data based on level
-    return [
-      Collectible(position: Vector2(200, 200)),
-      Collectible(position: Vector2(400, 300)),
-    ];
+  /// Loads the current level configuration.
+  Future<void> _loadLevel() async {
+    // Load level components based on the current level configuration
+    // ...
   }
 
   @override
   void update(double dt) {
     super.update(dt);
-
-    // Update game state based on current state
     switch (_gameState) {
       case GameState.playing:
-        _updatePlaying(dt);
+        // Update game logic
         break;
       case GameState.paused:
-        // Handle paused state
+        // Pause game logic
         break;
       case GameState.gameOver:
-        // Handle game over state
+        // Handle game over logic
         break;
       case GameState.levelComplete:
-        // Handle level complete state
+        // Handle level complete logic
         break;
     }
-  }
-
-  /// Updates the game state while playing.
-  void _updatePlaying(double dt) {
-    // Update player, obstacles, and collectibles
-    _player.update(dt);
-    _obstacles.forEach((obstacle) => obstacle.update(dt));
-    _collectibles.forEach((collectible) => collectible.update(dt));
-
-    // Check for collisions
-    _checkCollisions();
-
-    // Update score
-    _updateScore(dt);
-  }
-
-  /// Checks for collisions between the player, obstacles, and collectibles.
-  void _checkCollisions() {
-    // Check for player-obstacle collisions
-    for (final obstacle in _obstacles) {
-      if (_player.isColliding(obstacle)) {
-        _handleGameOver();
-        return;
-      }
-    }
-
-    // Check for player-collectible collisions
-    for (final collectible in _collectibles) {
-      if (_player.isColliding(collectible)) {
-        _collectible.collect();
-        _incrementScore(collectible.value);
-      }
-    }
-  }
-
-  /// Handles the game over state.
-  void _handleGameOver() {
-    _gameState = GameState.gameOver;
-    _analyticsService.logLevelFail();
-    // Show game over overlay
-    overlays.add(GameOverOverlay.ID);
-  }
-
-  /// Increments the player's score by the specified amount.
-  void _incrementScore(int amount) {
-    _score += amount;
-    _analyticsService.logScoreUpdate(_score);
-  }
-
-  /// Updates the player's score based on time.
-  void _updateScore(double dt) {
-    // Update score based on time elapsed
-    _incrementScore((dt * 10).toInt());
   }
 
   @override
   void onTapDown(TapDownInfo info) {
     super.onTapDown(info);
-    if (_gameState == GameState.playing) {
-      _player.jump();
+    switch (_gameState) {
+      case GameState.playing:
+        // Handle player input
+        _gameController.player.jump();
+        break;
+      case GameState.paused:
+        // Handle pause input
+        break;
+      case GameState.gameOver:
+        // Handle game over input
+        break;
+      case GameState.levelComplete:
+        // Handle level complete input
+        break;
     }
+  }
+
+  /// Handles a collision between the player and an obstacle.
+  void _handleCollision() {
+    if (_lives > 0) {
+      _lives--;
+      // Reset player position
+      _gameController.player.reset();
+    } else {
+      _gameState = GameState.gameOver;
+      _analyticsService.logEvent('level_fail');
+    }
+  }
+
+  /// Handles a collision between the player and a collectable.
+  void _handleCollectablePickup() {
+    _score++;
+    _analyticsService.logEvent('collectable_picked_up');
+  }
+
+  /// Handles a level completion event.
+  void _handleLevelComplete() {
+    _gameState = GameState.levelComplete;
+    _analyticsService.logEvent('level_complete');
   }
 }
 
-/// The possible game states.
+/// Represents the different game states.
 enum GameState {
   playing,
   paused,
